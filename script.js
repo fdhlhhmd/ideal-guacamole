@@ -385,6 +385,23 @@ function openForm(id) {
   for (const k of ["po", "date", "supplier", "type", "units", "got", "cost", "status", "eta", "note"]) {
     f.elements[k].value = v[k] ?? "";
   }
+
+  // --- NEW LOG RENDERING CODE ---
+  const logSec = $("#log-sec");
+  const logContainer = $("#activity-log");
+  if (o && o.history && o.history.length > 0) {
+    logSec.hidden = false;
+    logContainer.innerHTML = [...o.history].reverse().map(h => `
+      <div class="log-item">
+        <small>${new Date(h.date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</small>
+        <span>${esc(h.msg)}</span>
+      </div>
+    `).join("");
+  } else {
+    logSec.hidden = true;
+    logContainer.innerHTML = "";
+  }
+  // ----------------------------
   
   $("#dlg").showModal();
 }
@@ -400,6 +417,18 @@ $("#frm").onsubmit = e => {
   
   if (st === "arrived") got = units;
   else if (st === "pending" && got >= units) st = "arrived";
+
+  // --- NEW HISTORY TRACKING ---
+  const old = editId ? orders.find(x => x.id === editId) : null;
+  const history = old && old.history ? [...old.history] : [];
+
+  if (!old) {
+    history.push({ date: Date.now(), msg: `Order created for ${units} units` });
+  } else {
+    if (old.got !== got) history.push({ date: Date.now(), msg: `Arrived units updated: ${old.got} → ${got}` });
+    if (old.status !== st) history.push({ date: Date.now(), msg: `Status changed: ${old.status} → ${st}` });
+  }
+  // ----------------------------
   
   save({
     id,
@@ -413,6 +442,7 @@ $("#frm").onsubmit = e => {
     status: st,
     eta: f.eta.value,
     note: f.note.value.trim(),
+    history,
     updated: Date.now()
   });
   
@@ -432,6 +462,9 @@ async function complete(id) {
     o.status = "completed";
   }
   
+  o.history = o.history || [];
+  o.history.push({ date: Date.now(), msg: `Order completed manually at ${o.got}/${o.units} units` });
+
   save(o);
   if ($("#dlg").open) $("#dlg").close();
   render();
@@ -560,7 +593,10 @@ $("#main").onclick = async e => {
   const a = e.target.closest("[data-arr]");
   if (a) {
     const o = orders.find(x => x.id === a.dataset.arr);
-    o.status = "arrived"; o.got = o.units; save(o);
+    o.status = "arrived"; o.got = o.units; 
+    o.history = o.history || [];
+    o.history.push({ date: Date.now(), msg: `Marked full order (${o.units}) as arrived` });
+    save(o);
     render(); toast(o.po + " marked arrived"); return;
   }
   
@@ -571,7 +607,11 @@ $("#main").onclick = async e => {
   if (n) {
     const o = orders.find(x => x.id === n.dataset.can);
     if (o && await ask(`Cancel ${o.po}? It will be excluded from totals.`, "Cancel order")) {
-      o.status = "cancelled"; save(o); render(); toast(o.po + " cancelled");
+      o.status = "cancelled"; 
+      o.history = o.history || [];
+      o.history.push({ date: Date.now(), msg: `Order cancelled` });
+      save(o); 
+      render(); toast(o.po + " cancelled");
     }
     return;
   }
