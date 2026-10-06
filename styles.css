@@ -711,4 +711,48 @@ dialog::backdrop {
   .tools select {
     flex: 1;
   }
+  /* Activity Log Timeline */
+  #log-sec {
+    margin-top: 24px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .log-item {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding-left: 16px;
+    font-size: 13px;
+  }
+  .log-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+  }
+  .log-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 2.5px;
+    top: 16px;
+    bottom: -10px;
+    width: 1px;
+    background: var(--line);
+  }
+  .log-item small {
+    font-size: 11px;
+    color: var(--mut);
+    margin-bottom: 2px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
 }
